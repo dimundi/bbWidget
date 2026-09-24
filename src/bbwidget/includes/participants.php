@@ -39,7 +39,7 @@ class BBW_Participants {
         if ($column && $column->Null === 'NO') {
             $wpdb->query("ALTER TABLE $table MODIFY bbRacePackageId bigint(20) unsigned DEFAULT NULL");
         }
-        if (!$wpdb->last_error) { update_option('bbw_participants_schema_version', '2', false); }
+        if (!$wpdb->last_error) { update_option('bbw_participants_schema_version', '4', false); }
     }
     public static function save($input, $id = 0) {
         global $wpdb;
@@ -49,6 +49,14 @@ class BBW_Participants {
         $keys = array('bbeditionId', 'bbRacePackageId', 'active', 'fullName', 'irbEnabled', 'irbNick', 'email', 'irbGroupName', 'registeredByUserId', 'managedByUserId');
         foreach ($keys as $key) {
             if (isset($input[$key]) && !is_scalar($input[$key])) { return new WP_Error('invalid', 'Nieprawidłowa wartość pola.'); }
+        }
+        $activities = null;
+        if (array_key_exists('activities', $input)) {
+            if (!is_array($input['activities'])) { return new WP_Error('activities', 'Nieprawidłowa lista aktywności.'); }
+            foreach ($input['activities'] as $type) {
+                if (!is_string($type) || !isset(BBW_Packages::activities()[$type])) { return new WP_Error('activities', 'Nieprawidłowy typ aktywności.'); }
+            }
+            $activities = array_values(array_unique($input['activities']));
         }
         $edition = (string) ($input['bbeditionId'] ?? '');
         $package = (string) ($input['bbRacePackageId'] ?? '');
@@ -88,9 +96,24 @@ class BBW_Participants {
                 $data['startNumber'] = max(99, (int) $maximum) + 1;
                 if ($data['startNumber'] > 4294967295) { return new WP_Error('number_limit', 'Brak dostępnych numerów startowych.'); }
             }
-            $result = $id ? $wpdb->update($table, $data, array('bbParticipantId' => $id)) : $wpdb->insert($table, $data);
-            if ($result === false) { return new WP_Error('database', 'Nie udało się zapisać uczestnika.'); }
-            return $id ?: (int) $wpdb->insert_id;
+            if ($wpdb->query('START TRANSACTION') === false) { return new WP_Error('database', 'Nie udało się rozpocząć zapisu.'); }
+            try {
+                $result = $id ? $wpdb->update($table, $data, array('bbParticipantId' => $id)) : $wpdb->insert($table, $data);
+                if ($result === false) { throw new RuntimeException('Nie udało się zapisać uczestnika.'); }
+                $saved_id = $id ?: (int) $wpdb->insert_id;
+                if ($activities !== null) {
+                    $activity_table = BBW_Participant_Activities::table();
+                    if ($wpdb->delete($activity_table, array('bbParticipantId' => $saved_id)) === false) { throw new RuntimeException('Nie udało się zapisać aktywności.'); }
+                    foreach ($activities as $type) {
+                        if ($wpdb->insert($activity_table, array('bbParticipantId' => $saved_id, 'activityType' => $type)) === false) { throw new RuntimeException('Nie udało się zapisać aktywności.'); }
+                    }
+                }
+                if ($wpdb->query('COMMIT') === false) { throw new RuntimeException('Nie udało się zakończyć zapisu.'); }
+                return $saved_id;
+            } catch (RuntimeException $error) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('database', $error->getMessage());
+            }
         } finally {
             $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock));
         }
@@ -100,13 +123,17 @@ class BBW_Participants {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') { wp_die('Niedozwolona metoda.', '', array('response' => 405)); }
         check_admin_referer('bbw_save_participant');
         $input = wp_unslash($_POST);
+        if (!array_key_exists('activities', $input)) { $input['activities'] = array(); }
         if (isset($input['bbParticipantId']) && (!is_scalar($input['bbParticipantId']) || !ctype_digit((string) $input['bbParticipantId']))) { wp_die('Nieprawidłowy identyfikator.', '', array('response' => 400)); }
         $id = absint($input['bbParticipantId'] ?? 0);
         $result = self::save($input, $id);
         $args = array('page' => 'bbwidget-participants');
         if (is_wp_error($result)) {
             $token = strtolower(wp_generate_password(20, false));
-            $values = array('active' => 0, 'irbEnabled' => 0);
+            $values = array('active' => 0, 'irbEnabled' => 0, 'activities' => array());
+            if (is_array($input['activities'])) {
+                foreach ($input['activities'] as $type) { if (is_string($type) && isset(BBW_Packages::activities()[$type])) { $values['activities'][] = $type; } }
+            }
             foreach ($input as $key => $value) { if (is_scalar($value) && $key !== '_wpnonce') { $values[$key] = sanitize_text_field((string) $value); } }
             set_transient('bbw_participant_' . get_current_user_id() . '_' . $token, array('values' => $values, 'message' => $result->get_error_message()), 300);
             $args['form_error'] = $token;
@@ -120,6 +147,7 @@ class BBW_Participants {
     }
     public static function render() {
         if (!current_user_can('manage_options')) { return; }
+        if (($_GET['view'] ?? '') === 'import') { BBW_Import::render(); return; }
         global $wpdb;
         $table = self::table();
         $edition_table = BBW_Editions::table();
@@ -132,7 +160,7 @@ class BBW_Participants {
         $form = isset($_GET['edit']) || (isset($_GET['view']) && $_GET['view'] === 'new');
         echo '<div class="wrap bbw-admin">';
         if (!$form) {
-            echo '<h1 class="wp-heading-inline">Uczestnicy</h1> <a class="page-title-action" href="' . esc_url(add_query_arg('view', 'new', $url)) . '">Dodaj uczestnika</a><hr class="wp-header-end">';
+            echo '<h1 class="wp-heading-inline">Uczestnicy</h1> <a class="page-title-action" href="' . esc_url(add_query_arg('view', 'new', $url)) . '">Dodaj uczestnika</a> <a class="page-title-action" href="' . esc_url(add_query_arg('view', 'import', $url)) . '">Importuj z JSON</a><hr class="wp-header-end">';
             if (isset($_GET['saved'])) { echo '<div class="notice notice-success is-dismissible"><p>Uczestnik został zapisany.</p></div>'; }
             $edition = isset($_GET['edition']) && is_scalar($_GET['edition']) ? absint($_GET['edition']) : $current_edition;
             $search = isset($_GET['search']) && is_string($_GET['search']) ? sanitize_text_field(wp_unslash($_GET['search'])) : '';
@@ -150,14 +178,18 @@ class BBW_Participants {
             $page = isset($_GET['paged']) && is_scalar($_GET['paged']) ? max(1, absint($_GET['paged'])) : 1;
             $page = min($page, $pages);
             $limit = $wpdb->prepare(' LIMIT %d OFFSET %d', 25, ($page - 1) * 25);
-            $rows = $wpdb->get_results("SELECT p.*, e.editionNumber, r.name AS packageName FROM $table p LEFT JOIN $edition_table e ON e.bbeditionId=p.bbeditionId LEFT JOIN $package_table r ON r.bbRacePackageId=p.bbRacePackageId $where ORDER BY e.editionNumber DESC, p.bbParticipantId DESC $limit", ARRAY_A);
-            echo '<p>Liczba uczestników: <strong>' . esc_html($count) . '</strong></p><div class="bbw-table-scroll"><table class="widefat striped bbw-editions"><thead><tr><th>Uczestnik</th><th>Edycja</th><th>Pakiet</th><th>Numer startowy</th><th>Dopuszczony</th><th>IRB</th><th>Działania</th></tr></thead><tbody>';
+            $activity_table = BBW_Participant_Activities::table();
+            $rows = $wpdb->get_results("SELECT p.*, e.editionNumber,
+                (SELECT GROUP_CONCAT(a.activityType ORDER BY a.activityType SEPARATOR ',') FROM $activity_table a WHERE a.bbParticipantId=p.bbParticipantId) AS activityTypes
+                FROM $table p LEFT JOIN $edition_table e ON e.bbeditionId=p.bbeditionId $where ORDER BY e.editionNumber DESC, p.bbParticipantId DESC $limit", ARRAY_A);
+            $activity_labels = BBW_Packages::activities();
+            echo '<p>Liczba uczestników: <strong>' . esc_html($count) . '</strong></p><div class="bbw-table-scroll"><table class="widefat striped bbw-editions"><thead><tr><th>Uczestnik</th><th>Edycja</th><th>Aktywności</th><th>Numer startowy</th><th>Dopuszczony</th><th>IRB</th><th>Działania</th></tr></thead><tbody>';
             foreach ($rows as $row) {
                 $edit = add_query_arg('edit', $row['bbParticipantId'], $url);
                 $label = $row['fullName'] ?: ($row['irbNick'] ?: 'Uczestnik #' . $row['bbParticipantId']);
                 echo '<tr><td><a class="row-title" href="' . esc_url($edit) . '">' . esc_html($label) . '</a>';
                 if ($row['irbNick'] && $row['fullName']) { echo '<br>' . esc_html($row['irbNick']); }
-                echo '</td><td>' . esc_html($row['editionNumber']) . '</td><td>' . esc_html($row['packageName'] ?: 'Nie wybrano') . '</td><td>' . esc_html($row['startNumber'] ?: '—') . '</td><td>' . ($row['active'] ? '<span class="bbw-current">Tak</span>' : 'Nie') . '</td><td>' . ($row['irbEnabled'] ? 'Tak' : 'Nie') . '</td><td><a class="button" href="' . esc_url($edit) . '">Edytuj</a></td></tr>';
+                echo '</td><td>' . esc_html($row['editionNumber']) . '</td><td>' . esc_html($row['activityTypes'] ? implode(', ', array_map(function ($type) use ($activity_labels) { return $activity_labels[$type] ?? $type; }, explode(',', $row['activityTypes']))) : 'Brak aktywności') . '</td><td>' . esc_html($row['startNumber'] ?: '—') . '</td><td>' . ($row['active'] ? '<span class="bbw-current">Tak</span>' : 'Nie') . '</td><td>' . ($row['irbEnabled'] ? 'Tak' : 'Nie') . '</td><td><a class="button" href="' . esc_url($edit) . '">Edytuj</a></td></tr>';
             }
             if (!$rows) { echo '<tr><td colspan="7">Brak uczestników pasujących do wybranych filtrów.</td></tr>'; }
             echo '</tbody></table></div>';
@@ -170,6 +202,7 @@ class BBW_Participants {
         echo '<a class="bbw-back" href="' . esc_url($url) . '">← Wróć do listy uczestników</a>';
         $row = $id ? $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE bbParticipantId=%d", $id), ARRAY_A) : array('bbeditionId' => $current_edition, 'registeredByUserId' => get_current_user_id(), 'managedByUserId' => get_current_user_id());
         if (isset($_GET['edit']) && (!$id || !$row)) { echo '<h1>Nie znaleziono uczestnika</h1></div>'; return; }
+        $row['activities'] = $id ? $wpdb->get_col($wpdb->prepare('SELECT activityType FROM ' . BBW_Participant_Activities::table() . ' WHERE bbParticipantId=%d', $id)) : array();
         echo '<h1>' . ($id ? 'Edytuj uczestnika' : 'Dodaj uczestnika') . '</h1>';
         $packages = $wpdb->get_results("SELECT p.bbRacePackageId, p.bbeditionId, p.name, e.editionNumber FROM $package_table p JOIN $edition_table e ON e.bbeditionId=p.bbeditionId ORDER BY e.editionNumber DESC, p.name", ARRAY_A);
         if (isset($_GET['form_error']) && is_string($_GET['form_error'])) {
@@ -183,7 +216,11 @@ class BBW_Participants {
         foreach ($editions as $edition) { echo '<option value="' . esc_attr($edition['bbeditionId']) . '" ' . selected($row['bbeditionId'] ?? '', $edition['bbeditionId'], false) . '>' . esc_html($edition['editionNumber']) . '. edycja</option>'; }
         echo '</select></div><div class="bbw-field"><label for="bbRacePackageId">Pakiet startowy</label><select id="bbRacePackageId" name="bbRacePackageId"><option value="">Uzupełnię później</option>';
         foreach ($packages as $package) { echo '<option data-edition="' . esc_attr($package['bbeditionId']) . '" value="' . esc_attr($package['bbRacePackageId']) . '" ' . selected($row['bbRacePackageId'] ?? '', $package['bbRacePackageId'], false) . '>' . esc_html($package['name'] . ' — ' . $package['editionNumber'] . '. edycja') . '</option>'; }
-        echo '</select></div></div></section><section class="bbw-card"><h2>Dane uczestnika</h2><p>Imię, nazwisko i e-mail są opcjonalne. Zapis uczestnika nie tworzy konta do logowania.</p><div class="bbw-fields">';
+        echo '</select></div></div></section><section class="bbw-card"><h2>Aktywności</h2><p>Możesz zaznaczyć kilka aktywności, niezależnie od pakietu startowego.</p><fieldset><legend class="screen-reader-text">Aktywności uczestnika</legend>';
+        foreach (BBW_Packages::activities() as $type => $label) {
+            echo '<p><label><input type="checkbox" name="activities[]" value="' . esc_attr($type) . '" ' . checked(in_array($type, $row['activities'], true), true, false) . '> ' . esc_html($label) . '</label></p>';
+        }
+        echo '</fieldset></section><section class="bbw-card"><h2>Dane uczestnika</h2><p>Imię, nazwisko i e-mail są opcjonalne. Zapis uczestnika nie tworzy konta do logowania.</p><div class="bbw-fields">';
         self::text_field($row, 'fullName', 'Imię i nazwisko');
         self::text_field($row, 'email', 'E-mail', 'email');
         echo '</div></section><section class="bbw-card"><h2>Dopuszczenie do udziału</h2><p><label><input type="checkbox" name="active" value="1" ' . checked(!empty($row['active']), true, false) . '> Uczestnik dopuszczony do udziału</label></p><p class="description">Ręczna aktywacja nie oznacza opłacenia zamówienia.</p>';

@@ -2,23 +2,31 @@
 /**
  * Plugin Name: BB Widget
  * Description: Funkcje Biegu Belfrów.
- * Version: 0.4.0
+ * Version: 0.6.0
  * Text Domain: bbwidget
  */
 defined('ABSPATH') || exit;
 require_once __DIR__ . '/includes/editions.php';
 require_once __DIR__ . '/includes/packages.php';
 require_once __DIR__ . '/includes/participants.php';
+require_once __DIR__ . '/includes/import.php';
+require_once __DIR__ . '/includes/participant-activities.php';
+register_activation_hook(__FILE__, array('BBW_Import', 'install'));
 register_activation_hook(__FILE__, array('BBW_Participants', 'install'));
 register_activation_hook(__FILE__, array('BBW_Packages', 'install'));
 register_activation_hook(__FILE__, array('BBW_Editions', 'install'));
+register_activation_hook(__FILE__, array('BBW_Participant_Activities', 'install'));
 add_action('admin_init', function () {
-    if (current_user_can('manage_options') && get_option('bbw_participants_schema_version') !== '2') { BBW_Participants::install(); }
+    if (current_user_can('manage_options') && get_option('bbw_import_schema_version') !== '2') { BBW_Import::install(); }
+    if (current_user_can('manage_options') && get_option('bbw_participants_schema_version') !== '4') { BBW_Participants::install(); }
     if (current_user_can('manage_options') && get_option('bbw_packages_schema_version') !== '1') { BBW_Packages::install(); }
     if (current_user_can('manage_options') && get_option('bbw_schema_version') !== '1') {
         BBW_Editions::install();
     }
 });
+add_action('admin_init', function () {
+    if (current_user_can('manage_options') && get_option('bbw_participant_activities_schema_version') !== '1') { BBW_Participant_Activities::install(); }
+}, 20);
 add_action('admin_menu', function () {
     add_menu_page('Edycje BB', 'BB Widget', 'manage_options', 'bbwidget', array('BBW_Editions', 'render'), 'dashicons-universal-access-alt');
     add_submenu_page('bbwidget', 'Edycje BB', 'Edycje', 'manage_options', 'bbwidget-editions', array('BBW_Editions', 'render'));
@@ -26,6 +34,7 @@ add_action('admin_menu', function () {
     add_submenu_page('bbwidget', 'Uczestnicy', 'Uczestnicy', 'manage_options', 'bbwidget-participants', array('BBW_Participants', 'render'));
     remove_submenu_page('bbwidget', 'bbwidget');
 });
+add_action('admin_post_bbw_import', array('BBW_Import', 'handle'));
 add_action('admin_post_bbw_save_participant', array('BBW_Participants', 'handle_save'));
 add_action('admin_post_bbw_save_package', array('BBW_Packages', 'handle_save'));
 add_action('admin_post_bbw_save_edition', array('BBW_Editions', 'handle_save'));

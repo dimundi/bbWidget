@@ -1,4 +1,4 @@
-﻿# Uczestnicy
+# Uczestnicy
 
 Tabela: `{prefiks_WordPressa}bb_participants`, np. `wp_bb_participants`.
 
@@ -6,23 +6,25 @@ Jeden rekord to zapis uczestnika na konkretną edycję. Rekord zostaje po zakoń
 
 ## Kolumny
 
-| Kolumna            | Typ             | Wymagana           | Klucz | Opis                                                                                                            |
-| ------------------ | --------------- | ------------------ | ----- | --------------------------------------------------------------------------------------------------------------- |
-| bbParticipantId    | BIGINT UNSIGNED | Tak                | PK    | Identyfikator zapisu uczestnika.                                                                                |
-| bbeditionId        | BIGINT UNSIGNED | Tak                | FK    | Edycja biegu.                                                                                                   |
-| bbRacePackageId | BIGINT UNSIGNED | Nie przy ręcznym dodawaniu | FK | Pakiet startowy; administrator może uzupełnić go później. |
-| startNumber | INT UNSIGNED | Po dopuszczeniu do udziału | — | Nadawany automatycznie od 100, unikalny w ramach edycji. Bez ręcznej edycji. Przed nadaniem `NULL`. |
-| active | BOOLEAN | Tak | — | Czy uczestnik jest dopuszczony do udziału. Domyślnie `false`; `true` po opłaceniu pakietu lub ręcznej aktywacji. Przy imporcie `true`. |
-| fullName           | VARCHAR(255)    | Nie                | —     | Imię i nazwisko uczestnika.                                                                                     |
-| irbEnabled         | BOOLEAN         | Tak                | —     | Czy uczestnik bierze udział w IRB.                                                                              |
-| irbNick            | VARCHAR(255)    | Przy udziale w IRB | —     | Nick uczestnika.                                                                                                |
-| email              | VARCHAR(254)    | Nie                | —     | Opcjonalny e-mail uczestnika, niezależnie od udziału w IRB. Na ten adres wysyłamy zaproszenie do przejęcia obsługi IRB. |
-| irbGroupName       | VARCHAR(255)    | Nie                | —     | Grupa uczestnika w tej edycji.                                                                                  |
-| registeredByUserId | BIGINT UNSIGNED | Dla nowych zapisów | —     | Konto WordPressa, z którego zapisano uczestnika.                                                                |
-| managedByUserId    | BIGINT UNSIGNED | Dla nowych zapisów | —     | Konto WordPressa uprawnione do uzupełniania i edytowania IRB uczestnika.                                        |
-| orderItemId        | BIGINT UNSIGNED | Do ustalenia       | —     | Pozycja zamówienia WooCommerce dotycząca pakietu tego uczestnika.                                               |
+| Kolumna            | Typ             | Wymagana                                       | Klucz | Opis                                                                                                                                   |
+| ------------------ | --------------- | ---------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| bbParticipantId    | BIGINT UNSIGNED | Tak                                            | PK    | Identyfikator zapisu uczestnika.                                                                                                       |
+| bbeditionId        | BIGINT UNSIGNED | Tak                                            | FK    | Edycja biegu.                                                                                                                          |
+| bbRacePackageId    | BIGINT UNSIGNED | Nie przy imporcie archiwum i ręcznym dodawaniu | FK    | Pakiet startowy; przy imporcie archiwum pozostaje `NULL`.                                                                              |
+| startNumber        | INT UNSIGNED    | Po dopuszczeniu do udziału                     | —     | Nadawany automatycznie od 100, unikalny w ramach edycji. Bez ręcznej edycji. Przed nadaniem `NULL`.                                    |
+| active             | BOOLEAN         | Tak                                            | —     | Czy uczestnik jest dopuszczony do udziału. Domyślnie `false`; `true` po opłaceniu pakietu lub ręcznej aktywacji. Przy imporcie `true`. |
+| fullName           | VARCHAR(255)    | Nie                                            | —     | Imię i nazwisko uczestnika.                                                                                                            |
+| irbEnabled         | BOOLEAN         | Tak                                            | —     | Czy uczestnik bierze udział w IRB.                                                                                                     |
+| irbNick            | VARCHAR(255)    | Przy udziale w IRB                             | —     | Nick uczestnika.                                                                                                                       |
+| email              | VARCHAR(254)    | Nie                                            | —     | Opcjonalny e-mail uczestnika, niezależnie od udziału w IRB. Na ten adres wysyłamy zaproszenie do przejęcia obsługi IRB.                |
+| irbGroupName       | VARCHAR(255)    | Nie                                            | —     | Grupa uczestnika w tej edycji.                                                                                                         |
+| registeredByUserId | BIGINT UNSIGNED | Dla nowych zapisów                             | —     | Konto WordPressa, z którego zapisano uczestnika.                                                                                       |
+| managedByUserId    | BIGINT UNSIGNED | Dla nowych zapisów                             | —     | Konto WordPressa uprawnione do uzupełniania i edytowania IRB uczestnika.                                                               |
+| orderItemId        | BIGINT UNSIGNED | Do ustalenia                                   | —     | Pozycja zamówienia WooCommerce dotycząca pakietu tego uczestnika.                                                                      |
 
 ## Powiązania
+
+- Aktywności zapisujemy w [[bb_participant_activities]]. Jeden uczestnik może mieć kilka aktywności.
 
 - `bbeditionId` → [[bb_editions]].`bbeditionId`.
 - `bbRacePackageId` → [[bb_race_packages]].`bbRacePackageId`. Pakiet musi należeć do edycji wskazanej przez `bbeditionId`.
