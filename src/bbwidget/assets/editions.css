@@ -16,3 +16,8 @@
 @media (max-width: 600px) { .bbw-fields { grid-template-columns: 1fr; } .bbw-card { padding: 18px; } }
 .bbw-field select, .bbw-field input[type=text] { max-width: 100%; width: 100%; min-height: 38px; }
 .bbw-package-filter { margin: 20px 0; }
+
+.bbw-field input[type=email] { min-height: 38px; width: 100%; max-width: 100%; }
+.bbw-participant-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 20px 0; }
+.bbw-participant-filter input, .bbw-participant-filter select { max-width: 100%; }
+.bbw-card > p + .bbw-fields, .bbw-card > .description + .bbw-field { margin-top: 20px; }

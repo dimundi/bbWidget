@@ -1,4 +1,4 @@
-# Uczestnicy
+﻿# Uczestnicy
 
 Tabela: `{prefiks_WordPressa}bb_participants`, np. `wp_bb_participants`.
 
@@ -10,8 +10,8 @@ Jeden rekord to zapis uczestnika na konkretną edycję. Rekord zostaje po zakoń
 | ------------------ | --------------- | ------------------ | ----- | --------------------------------------------------------------------------------------------------------------- |
 | bbParticipantId    | BIGINT UNSIGNED | Tak                | PK    | Identyfikator zapisu uczestnika.                                                                                |
 | bbeditionId        | BIGINT UNSIGNED | Tak                | FK    | Edycja biegu.                                                                                                   |
-| bbRacePackageId    | BIGINT UNSIGNED | Tak                | FK    | Wybrany pakiet startowy.                                                                                        |
-| startNumber | INT UNSIGNED | Po opłaceniu zamówienia | — | Numer startowy uczestnika, nadawany po opłaceniu zamówienia z jego pakietem startowym. Przed opłaceniem pusty (`NULL`). |
+| bbRacePackageId | BIGINT UNSIGNED | Nie przy ręcznym dodawaniu | FK | Pakiet startowy; administrator może uzupełnić go później. |
+| startNumber | INT UNSIGNED | Po dopuszczeniu do udziału | — | Nadawany automatycznie od 100, unikalny w ramach edycji. Bez ręcznej edycji. Przed nadaniem `NULL`. |
 | active | BOOLEAN | Tak | — | Czy uczestnik jest dopuszczony do udziału. Domyślnie `false`; `true` po opłaceniu pakietu lub ręcznej aktywacji. Przy imporcie `true`. |
 | fullName           | VARCHAR(255)    | Nie                | —     | Imię i nazwisko uczestnika.                                                                                     |
 | irbEnabled         | BOOLEAN         | Tak                | —     | Czy uczestnik bierze udział w IRB.                                                                              |
@@ -31,6 +31,12 @@ Jeden rekord to zapis uczestnika na konkretną edycję. Rekord zostaje po zakoń
 - Akcesoria uczestnika są powiązane przez [[bb_participant_accessories]].
 - Wpisy dystansów IRB przechowujemy w [[bb_irb_entries]], powiązane przez `bbParticipantId`.
 - Końcowe podsumowanie IRB przechowujemy w [[bb_irb_results]], powiązane przez `bbParticipantId`.
+
+## Formularz administratora
+
+- Domyślnie wybieramy bieżącą edycję. Jeśli zaznaczono kilka, wybieramy tę z najwyższym numerem.
+- Brak pakietów nie blokuje formularza ani ręcznego zapisu uczestnika.
+- Numer nadajemy przy aktywacji, kolejno od 100 w każdej edycji. Ponowny zapis lub wyłączenie aktywności nie zmienia nadanego numeru.
 
 ## Dopuszczenie do udziału
 
