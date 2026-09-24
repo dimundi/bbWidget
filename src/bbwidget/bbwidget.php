@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: BB Widget
- * Description: Funkcje Biegu Belfrów.
+ * Description: Zarządzanie Biegiem Belfrów: edycje, pakiety startowe, uczestnicy, aktywności i import danych z archiwum.
  * Version: 0.6.0
  * Text Domain: bbwidget
  */
@@ -11,6 +11,7 @@ require_once __DIR__ . '/includes/packages.php';
 require_once __DIR__ . '/includes/participants.php';
 require_once __DIR__ . '/includes/import.php';
 require_once __DIR__ . '/includes/participant-activities.php';
+require_once __DIR__ . '/includes/shortcodes.php';
 register_activation_hook(__FILE__, array('BBW_Import', 'install'));
 register_activation_hook(__FILE__, array('BBW_Participants', 'install'));
 register_activation_hook(__FILE__, array('BBW_Packages', 'install'));
@@ -32,6 +33,7 @@ add_action('admin_menu', function () {
     add_submenu_page('bbwidget', 'Edycje BB', 'Edycje', 'manage_options', 'bbwidget-editions', array('BBW_Editions', 'render'));
     add_submenu_page('bbwidget', 'Pakiety startowe', 'Pakiety startowe', 'manage_options', 'bbwidget-packages', array('BBW_Packages', 'render'));
     add_submenu_page('bbwidget', 'Uczestnicy', 'Uczestnicy', 'manage_options', 'bbwidget-participants', array('BBW_Participants', 'render'));
+    add_submenu_page('bbwidget', 'Shortcodes', 'Shortcodes', 'manage_options', 'bbwidget-shortcodes', array('BBW_Shortcodes', 'render'));
     remove_submenu_page('bbwidget', 'bbwidget');
 });
 add_action('admin_post_bbw_import', array('BBW_Import', 'handle'));
@@ -39,6 +41,11 @@ add_action('admin_post_bbw_save_participant', array('BBW_Participants', 'handle_
 add_action('admin_post_bbw_save_package', array('BBW_Packages', 'handle_save'));
 add_action('admin_post_bbw_save_edition', array('BBW_Editions', 'handle_save'));
 add_action('admin_enqueue_scripts', function ($hook) {
+    if (($_GET['page'] ?? '') === 'bbwidget-shortcodes') {
+        wp_enqueue_style('bbw-editions', plugins_url('assets/editions.css', __FILE__), array(), filemtime(__DIR__ . '/assets/editions.css'));
+        wp_enqueue_script('bbw-shortcodes', plugins_url('assets/shortcodes.js', __FILE__), array(), filemtime(__DIR__ . '/assets/shortcodes.js'), true);
+        return;
+    }
     if (!in_array($_GET['page'] ?? '', array('bbwidget', 'bbwidget-editions', 'bbwidget-packages', 'bbwidget-participants'), true)) { return; }
     if (($_GET['page'] ?? '') === 'bbwidget-participants') { wp_enqueue_script('bbw-participants', plugins_url('assets/participants.js', __FILE__), array(), filemtime(__DIR__ . '/assets/participants.js'), true); }
     wp_enqueue_media();
@@ -46,4 +53,3 @@ add_action('admin_enqueue_scripts', function ($hook) {
     wp_enqueue_style('bbw-editions', plugins_url('assets/editions.css', __FILE__), array(), filemtime(__DIR__ . '/assets/editions.css'));
     wp_enqueue_script('bbw-editions', plugins_url('assets/editions.js', __FILE__), array('jquery', 'wp-color-picker'), filemtime(__DIR__ . '/assets/editions.js'), true);
 });
-add_shortcode('bbwidget', function () { return '<p>Hello world — BB Widget działa!</p>'; });
