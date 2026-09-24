@@ -1,0 +1,26 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Dependencies
+node_modules/
+vendor/
+
+# Obsidian local settings
+.obsidian/
+.trash/
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+
+# Logs and temporary files
+*.log
+*.tmp
