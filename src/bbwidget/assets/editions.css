@@ -1,0 +1,16 @@
+.bbw-admin { max-width: 1200px; }
+.bbw-admin .bbw-back { display: inline-block; margin: 12px 0; }
+.bbw-edition-form { max-width: 850px; }
+.bbw-card { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 24px; margin: 20px 0; }
+.bbw-card h2 { margin: 0 0 22px; font-size: 18px; }
+.bbw-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.bbw-field > label { display: block; font-weight: 600; margin-bottom: 8px; }
+.bbw-field input[type=date], .bbw-field input[type=number] { min-height: 38px; max-width: 100%; width: 240px; }
+.bbw-field .description { margin: 6px 0 0; }
+.bbw-card > p { margin-bottom: 0; }
+.bbw-actions { display: flex; align-items: center; gap: 12px; padding-bottom: 28px; }
+.bbw-table-scroll { overflow-x: auto; }
+.bbw-editions td, .bbw-editions th { padding: 16px; vertical-align: middle; }
+.bbw-current { background: #e7f3eb; color: #165c2e; border-radius: 4px; padding: 4px 10px; font-weight: 600; }
+#bbw-logo-preview img { max-width: 150px; height: auto; margin-bottom: 12px; }
+@media (max-width: 600px) { .bbw-fields { grid-template-columns: 1fr; } .bbw-card { padding: 18px; } }

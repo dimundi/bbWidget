@@ -2,21 +2,28 @@
 /**
  * Plugin Name: BB Widget
  * Description: Funkcje Biegu Belfrów.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Text Domain: bbwidget
  */
-
 defined('ABSPATH') || exit;
-
-add_shortcode('bbwidget', function () {
-    return '<p>Hello world — BB Widget działa!</p>';
+require_once __DIR__ . '/includes/editions.php';
+register_activation_hook(__FILE__, array('BBW_Editions', 'install'));
+add_action('admin_init', function () {
+    if (current_user_can('manage_options') && get_option('bbw_schema_version') !== '1') {
+        BBW_Editions::install();
+    }
 });
-
 add_action('admin_menu', function () {
-    add_menu_page('BB Widget', 'BB Widget', 'manage_options', 'bbwidget', function () {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-        echo '<div class="wrap"><h1>BB Widget</h1><p>Hello world — BB Widget działa!</p></div>';
-    }, 'dashicons-universal-access-alt');
+    add_menu_page('Edycje BB', 'BB Widget', 'manage_options', 'bbwidget', array('BBW_Editions', 'render'), 'dashicons-universal-access-alt');
+    add_submenu_page('bbwidget', 'Edycje BB', 'Edycje', 'manage_options', 'bbwidget-editions', array('BBW_Editions', 'render'));
+    remove_submenu_page('bbwidget', 'bbwidget');
 });
+add_action('admin_post_bbw_save_edition', array('BBW_Editions', 'handle_save'));
+add_action('admin_enqueue_scripts', function ($hook) {
+    if (!in_array($_GET['page'] ?? '', array('bbwidget', 'bbwidget-editions'), true)) { return; }
+    wp_enqueue_media();
+    wp_enqueue_style('wp-color-picker');
+    wp_enqueue_style('bbw-editions', plugins_url('assets/editions.css', __FILE__), array(), filemtime(__DIR__ . '/assets/editions.css'));
+    wp_enqueue_script('bbw-editions', plugins_url('assets/editions.js', __FILE__), array('jquery', 'wp-color-picker'), filemtime(__DIR__ . '/assets/editions.js'), true);
+});
+add_shortcode('bbwidget', function () { return '<p>Hello world — BB Widget działa!</p>'; });
