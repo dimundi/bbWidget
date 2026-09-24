@@ -1,4 +1,4 @@
-﻿# Uczestnicy
+# Uczestnicy
 
 Tabela: `{prefiks_WordPressa}bb_participants`, np. `wp_bb_participants`.
 
@@ -12,6 +12,7 @@ Jeden rekord to zapis uczestnika na konkretną edycję. Rekord zostaje po zakoń
 | bbeditionId        | BIGINT UNSIGNED | Tak                | FK    | Edycja biegu.                                                                                                   |
 | bbRacePackageId    | BIGINT UNSIGNED | Tak                | FK    | Wybrany pakiet startowy.                                                                                        |
 | startNumber | INT UNSIGNED | Po opłaceniu zamówienia | — | Numer startowy uczestnika, nadawany po opłaceniu zamówienia z jego pakietem startowym. Przed opłaceniem pusty (`NULL`). |
+| active | BOOLEAN | Tak | — | Czy uczestnik jest dopuszczony do udziału. Domyślnie `false`; `true` po opłaceniu pakietu lub ręcznej aktywacji. Przy imporcie `true`. |
 | fullName           | VARCHAR(255)    | Nie                | —     | Imię i nazwisko uczestnika.                                                                                     |
 | irbEnabled         | BOOLEAN         | Tak                | —     | Czy uczestnik bierze udział w IRB.                                                                              |
 | irbNick            | VARCHAR(255)    | Przy udziale w IRB | —     | Nick uczestnika.                                                                                                |
@@ -31,6 +32,12 @@ Jeden rekord to zapis uczestnika na konkretną edycję. Rekord zostaje po zakoń
 - Wpisy dystansów IRB przechowujemy w [[bb_irb_entries]], powiązane przez `bbParticipantId`.
 - Końcowe podsumowanie IRB przechowujemy w [[bb_irb_results]], powiązane przez `bbParticipantId`.
 
+## Dopuszczenie do udziału
+
+- Opłacenie zamówienia z pakietem uczestnika ustawia `active = true`.
+- Administrator może ręcznie aktywować uczestnika w szczególnych przypadkach.
+- `active` jest niezależne od zgody na udział w IRB (`irbEnabled`).
+
 ## Obsługa IRB i historia
 
 - Początkowo IRB obsługuje użytkownik, który zapisał uczestnika.
@@ -39,11 +46,11 @@ Jeden rekord to zapis uczestnika na konkretną edycję. Rekord zostaje po zakoń
 - Po przyjęciu zaproszenia poprzedni zarządzający traci możliwość uzupełniania i edytowania IRB. `registeredByUserId`, powiązania zakupów oraz zamówienie i płatność kupującego pozostają bez zmian.
 - Samo utworzenie konta z pasującym e-mailem nie przekazuje dostępu.
 - Nick, grupa i pakiet dotyczą konkretnego zapisu. Nowa edycja nie nadpisuje danych poprzedniej.
-- Importujemy wyłącznie dawnych uczestników IRB, bez automatycznego tworzenia kont. Powiązania z kontami mogą być puste dla importowanych rekordów.
+- Eksportujemy i importujemy wszystkich aktywnych uczestników starych edycji, niezależnie od udziału w IRB. W eksporcie i po imporcie `active = true`; zachowujemy osobno wartość `irbEnabled`. Nie tworzymy automatycznie kont; powiązania z kontami mogą być puste.
 
 ## Do ustalenia
 
-- Stany zapisu i wpływ opłacenia lub zwrotu zamówienia.
+- Wpływ anulowania lub zwrotu zamówienia na dopuszczenie uczestnika.
 - Zakres danych i powiązań dostępnych przy migracji.
 
 Wymagania: [[Start#Wymagania|Start — punkty 4–8]].

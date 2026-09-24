@@ -24,6 +24,8 @@ Wszystkie dystanse zapisujemy w metrach — zarówno w pakietach startowych, jak
 
 7. Konto użytkownika i uczestnik biegu są osobnymi rekordami. Osoba zarządzająca zapisem wybiera „Przekaż obsługę IRB”. Wysyłamy zaproszenie na e-mail uczestnika. Odbiorca zakłada konto lub loguje się i przyjmuje zaproszenie. Wtedy przejmuje zarządzanie IRB, a dotychczasowy zarządzający traci możliwość jego uzupełniania i edytowania. Samo utworzenie konta z pasującym e-mailem nie przekazuje dostępu. Zamówienie i płatność pozostają przy kupującym.
 
-8. Ze starego systemu do nowej bazy danych przenosimy wyłącznie uczestników biorących udział w IRB.
+8. Ze starego systemu eksportujemy i przenosimy wszystkich aktywnych uczestników, niezależnie od udziału w IRB. W eksporcie i po imporcie mają `active = true`. Zachowujemy ich zgodę lub brak zgody na IRB.
 
 9. Docelowo obsługę zamówień w WooCommerce łączymy z płatnościami i Apaczką. Potrzebujemy obsługi adresów wysyłki, drukowania podsumowań zamówień oraz ręcznej zmiany statusów zamówień i ich realizacji.
+
+10. Uczestnik ma flagę `active` oznaczającą dopuszczenie do udziału. Ustawiamy ją automatycznie po opłaceniu zamówienia z jego pakietem. Administrator może również ręcznie aktywować uczestnika w szczególnych przypadkach.
